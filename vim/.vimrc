@@ -62,6 +62,10 @@ let g:airline#extensions#tabline#enabled = 1
 let g:airline_theme='murmur'
 colorscheme jellybeans
 
+
+let g:NERDTreeDirArrowExpandable="+"
+let g:NERDTreeDirArrowCollapsible="~"
+
 set number
 set ts=3
 set expandtab
