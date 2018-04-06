@@ -1,0 +1,130 @@
+## Customization
+# COLORS
+NOC="\[[0m\]"
+WHITE="\[[1m\]"
+GREY="\[[2m\]"
+UNDERLINE="\[[4m\]"
+DEFACE="\[[9m\]"
+DARK="\[[30m\]"
+RED="\[[31m\]"
+GREEN="\[[32m\]"
+YELOW="\[[33m\]"
+BLUE="\[[34m\]"
+PINK="\[[35m\]"
+AZURE="\[[36m\]"
+BDARK="\[[40m\]"
+BRED="\[[41m\]"
+BGREEN="\[[42m\]"
+BYELOW="\[[43m\]"
+BBLUE="\[[44m\]"
+BPINK="\[[45m\]"
+BAZURE="\[[46m\]"
+BWHITE="\[[7m\]"
+HDARK="\[[90m\]"
+HRED="\[[91m\]"
+HGREEN="\[[1;32m\]"
+HYELOW="\[[33m\]"
+HBLUE="\[[34m\]"
+HPINK="\[[35m\]"
+HAZURE="\[[36m\]"
+
+
+function create_prompt {
+    gitpart=""
+    if git ls-files ./ --error-unmatch >/dev/null 2>/dev/null ; then
+        stash=$(git stash list | wc -l)
+        mod=$(git status -s --porcelain | egrep -v "^\?\?"| grep -E "^.{0,1}[RM]"|wc -l)
+        add=$(git status -s --porcelain | egrep -v "^\?\?"| grep -E "^.{0,1}A"|wc -l)
+        del=$(git status -s --porcelain | egrep -v "^\?\?"| grep -E "^.{0,1}D"|wc -l)
+
+        # git submodules
+        if [ -e ./.gitmodules ] ; then 
+            submod=$(git submodule | wc -l)
+            submodule_info=" | ${HAZURE}SM: ${HYELOW}$submod$NOC"
+        else
+            submodule_info=""
+        fi
+
+        #git status local vs remote
+        status=$(git status | grep -e "^.*Your branch is")
+
+        if echo $status | grep 'ahead' > /dev/null ; then
+            num=$(echo $status | grep -o "[0-9]*")
+            rstat=" ${AZURE}U:${HYELOW}->${HRED}$num$NOC"
+        elif echo $status | grep 'behind' > /dev/null ; then
+            num=$(echo $status | grep -o "[0-9]*")
+            rstat=" ${AZURE}U:${HYELOW}<-${HRED}$num$NOC"
+        else
+                rstat=""
+        fi
+
+        if [ $mod -gt 0 ] ; then 
+            mod="$HRED$mod$HGREEN"
+        else
+            mod="$NOC$WHITE$mod$HGREEN"
+        fi
+        if [ $add -gt 0 ] ; then 
+            add="$HRED$add$HGREEN"
+        else
+            add="$NOC$WHITE$add$HGREEN"
+        fi
+        if [ $del -gt 0 ] ; then 
+            del="$HRED$del$HGREEN"
+        else
+            del="$NOC$WHITE$del$HGREEN"
+        fi
+        if [ $stash -gt 0 ] ; then 
+            stash=" ${AZURE}S: $RED$stash$HGREEN"
+        else
+            stash=""
+        fi
+
+        repo=$(git branch | grep -e "^\*"| awk '{print $2}')
+        gitpart="\n(GIT: $repo | M: $mod A: $add D: $del$stash$rstat$submodule_info )"
+    fi
+
+    if [[ "$USER" == "root" ]] ; then 
+        COLORPS=$NOC$HRED
+    else
+        COLORPS=$NOC$WHITE
+    fi
+
+    LOADENV=$( __loadenv )
+    PS1="\n$HGREEN($COLORPS\u@\h$HGREEN)-(${COLORPS}$LOADENV$HGREEN)-($COLORPS\w$HGREEN)$gitpart\n($COLORPS!\!$HGREEN)-> $NOC"
+}
+
+function __loadenv {
+        if [ ! -z ${AWS_SESSION_EXPIRATION+x} ]; then
+                now=`date +%s`
+                expiry=${AWS_SESSION_EXPIRATION-$now}
+                left=$(( $expiry - $now ))
+                account=$CPSD_AWS_ACCOUNT
+                account_prompt $account $left
+        fi
+}
+
+function account_prompt {
+        local account=$1
+        local left=$2
+
+        : ${LOADENV_WARNING_EXPIRATION:=15}
+        : ${LOADENV_CRITICAL_EXPIRATION:=5}
+
+        local RED='\001\033[31m\002'
+        local REDINVERTED='\001\033[41;30m\002'
+        local YELLOW='\001\033[33m\002'
+        local NORMAL='\001\033[0m\002'
+
+        if [ "$left" -lt 0 ]; then
+                echo -ne "${REDINVERTED}${account} Expired!${NORMAL}"
+        elif [[ ${left} -lt $(( ${LOADENV_CRITICAL_EXPIRATION} * 60 )) ]]; then
+                echo -ne "${RED}${account} <${LOADENV_CRITICAL_EXPIRATION}m${NORMAL}"
+        elif [[ ${left} -lt $(( ${LOADENV_WARNING_EXPIRATION} * 60 )) ]]; then
+                echo -ne "${YELLOW}${account} <${LOADENV_WARNING_EXPIRATION}m${NORMAL}"
+        else
+                echo -n "${GREEN}$account${GREEN}"
+        fi
+}
+
+export PROMPT_COMMAND="create_prompt"
+
