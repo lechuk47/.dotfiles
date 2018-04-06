@@ -1,0 +1,8 @@
+[user]
+	name = Jordi Piriz
+	email = jordi.piriz@capside.com
+[push]
+		  default = simple
+[alias]
+		  glo2 = log --graph --oneline --decorate
+		  glo = log --graph --pretty='format:%C(yellow)%h%C(red)%d %C(white)%ci %C()%s %C(bold green)<%cn>'
